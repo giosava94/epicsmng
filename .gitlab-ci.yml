@@ -23,6 +23,15 @@ build:
     entrypoint: [""]
   script:
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
-    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.ubuntu --destination $CI_REGISTRY_IMAGE:ubuntu
+    - /kaniko/executor --context $CI_PROJECT_DIR \
+      --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.ubuntu \
+      --destination $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG-ubuntu \
+      --destination $CI_REGISTRY_IMAGE:ubuntu
+    - /kaniko/executor --context $CI_PROJECT_DIR \
+      --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.centos \
+      --destination $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG-centos
+      --destination $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+      --destination $CI_REGISTRY_IMAGE:centos \
+      --destination $CI_REGISTRY_IMAGE:latest
   #only:
   #  - tags
