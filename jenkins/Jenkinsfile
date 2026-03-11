@@ -1,0 +1,99 @@
+pipeline {
+    agent any
+    stages {
+        stage('Run tests') {
+            parallel {
+                stage('asyn') { 
+                    steps { 
+                        build job: "epics-asyn-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('autosave') {
+                    steps {
+                        build job: "epics-autosave-tests/${env.BRANCH_NAME}"                        
+                    }
+                }
+                stage('base') { 
+                    steps { 
+                        build job: "epics-base-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('beckmotor') { 
+                    steps { 
+                        build job: "epics-beckmotor-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('busy') { 
+                    steps { 
+                        build job: "epics-busy-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('cagateway') { 
+                    steps { 
+                        build job: "epics-cagateway-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('calc') { 
+                    steps { 
+                        build job: "epics-calc-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('csm') { 
+                    steps { 
+                        build job: "epics-csm-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('gensub') { 
+                    steps { 
+                        build job: "epics-gensub-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('ipac') { 
+                    steps { 
+                        build job: "epics-ipac-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('modbus') { 
+                    steps { 
+                        build job: "epics-modbus-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('motor') { 
+                    steps { 
+                        build job: "epics-motor-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('pcas') { 
+                    steps { 
+                        build job: "epics-pcas-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('s7nodave') { 
+                    steps { 
+                        build job: "epics-s7nodave-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('sncseq') { 
+                    steps { 
+                        build job: "epics-sncseq-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('sscan') { 
+                    steps { 
+                        build job: "epics-sscan-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('std') { 
+                    steps { 
+                        build job: "epics-std-tests/${env.BRANCH_NAME}"
+                    }
+                }
+                stage('streamdevice') { 
+                    steps { 
+                        build job: "epics-streamdevice-tests/${env.BRANCH_NAME}"
+                    }
+                }
+            }
+        }
+   }
+}

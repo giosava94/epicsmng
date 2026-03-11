@@ -1,0 +1,54 @@
+pipeline {
+    agent any
+    environment {
+        IMAGE = 'baltig.infn.it:4567/epicscs/epicsmng'
+    }
+    stages {
+        stage('Test epics-asyn versions') {
+            matrix {
+                agent {
+                    kubernetes { 
+                        yaml """
+                        apiVersion: v1
+                        kind: Pod
+                        spec:
+                          imagePullSecrets:
+                            - name: baltig-reg-key
+                          containers:
+                            - name: builder
+                              image: ${IMAGE}:${OS}-${BRANCH_NAME}
+                              command:
+                                - cat
+                              tty: true
+                        """
+                    }
+                }
+                axes {
+                    axis {
+                        name 'OS'
+                        values 'ubuntu20.04', 'ubuntu22.04', 'ubuntu24.04', 'almalinux9', 'almalinux10'
+                    }
+                    axis {
+                        name 'BASE'
+                        values 'R7.0.10', 'R3.16.2', 'R3.15.9', 'R3.14.12.8'
+                    }
+                    axis {
+                        name 'ASYN'
+                        values 'R4-45', 'R4-44-2', 'R4-44-1', 'R4-44', 'R4-43'
+                    }
+                }
+                stages {
+                    stage('Test asyn') {
+                        steps {
+                            container('builder') {
+                                sh "printf '%s' 'base = ${BASE}\n' > epicsmng.conf"
+                                sh "printf '%s' 'asyn = ${ASYN}' >> epicsmng.conf"
+                                sh 'epicsmng makemodules -v -t epicsmng.conf'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
