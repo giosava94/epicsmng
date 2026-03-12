@@ -1,0 +1,13 @@
+diff --git a/src/ca/legacy/pcas/generic/ioBlocked.h b/src/ca/legacy/pcas/generic/ioBlocked.h
+index 000292eaf..293ad79b5 100644
+--- a/src/ca/legacy/pcas/generic/ioBlocked.h
++++ b/src/ca/legacy/pcas/generic/ioBlocked.h
+@@ -40,7 +40,7 @@ private:
+ 	virtual void ioBlockedSignal ();
+ };
+ 
+-class ioBlockedList : private tsDLList<ioBlocked> {
++class ioBlockedList : protected tsDLList<ioBlocked> {
+ friend class ioBlocked;
+ public:
+ 	ioBlockedList ();

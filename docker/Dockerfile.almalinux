@@ -3,12 +3,15 @@ ARG OS_VERSION=10
 FROM almalinux:${OS_VERSION}-minimal AS install-epicsmng
 
 ARG HOME=/root
+ARG OS_VERSION
 ENV HOME=${HOME}
 ENV PATH=${PATH}:${HOME}/.local/bin
+ENV OS_VERSION=${OS_VERSION}
 
 # Copy epicsmng code from repository
 COPY ./utils /epicsmng/utils
 COPY ./epicsmng ./install.sh /epicsmng/
+COPY ./patches/almalinux${OS_VERSION} /etc/epicsmng/patches
 
 # Install required packets to build epics base and asyn
 # Install, clean source files and set the github mirror of the base to be used (faster)
