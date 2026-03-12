@@ -1,68 +1,40 @@
 stages:
   - build
   - test
-  # - release
+  - release
 
-.ubuntu_build_matrix: &ubuntu_build_matrix
+.build-image:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - echo "$GROUP_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $GROUP_REGISTRY_USER --password-stdin
+  variables:
+    IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG-$OS$OS_VERSION
+  script:
+    - echo "Building $ITEM for $OS$OS_VERSION"
+    - docker build -f docker/Dockerfile.$OS --pull -t $IMAGE_TAG --build-arg OS_VERSION=$OS_VERSION .
+    - docker push $IMAGE_TAG
+
+
+# Compile and push Docker images for Ubuntu
+build-ubuntu:
+  extends: .build-image
+  variables:
+    OS: ubuntu
   parallel:
     matrix:
       - OS_VERSION: ["20.04", "22.04", "24.04"]
 
-.alma_build_matrix: &alma_build_matrix
+# Compile and push Docker images for AlmaLinux
+build-alma:
+  extends: .build-image
+  variables:
+    OS: almalinux
   parallel:
     matrix:
       - OS_VERSION: ["9", "10"]
-
-.docker_image_matrix: &docker_image_matrix
-  parallel:
-    matrix:
-      - OS:
-          [
-            "ubuntu20.04",
-            "ubuntu22.04",
-            "ubuntu24.04",
-            "almalinux9",
-            "almalinux10",
-          ]
-        EPICSMNG_CONF: ["base = R7.0.9"]
-
-# .release_matrix: &release_matrix
-#   parallel:
-#     matrix:
-#       - OS: ["almalinux10"]
-#         ITEM: ["es-triplet", "es-steerer", "es-dipole"]
-
-# Compile and push Docker images for Ubuntu
-build-ubuntu:
-  image: docker:latest
-  stage: build
-  services:
-    - docker:dind
-  before_script:
-    - echo "$GROUP_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $GROUP_REGISTRY_USER --password-stdin
-  variables:
-    IMAGE_TAG: $CI_REGISTRY_IMAGE:ubuntu$OS_VERSION-$CI_COMMIT_REF_SLUG
-  script:
-    - echo "Building $ITEM for $OS_VERSION"
-    - docker build -f docker/Dockerfile.ubuntu --pull -t $IMAGE_TAG --build-arg OS_VERSION=$OS_VERSION .
-    - docker push $IMAGE_TAG
-  <<: *ubuntu_build_matrix
-
-# Compile and push Docker images for AlmaLinux
-build-alma:
-  image: docker:latest
-  stage: build
-  services:
-    - docker:dind
-  before_script:
-    - echo "$GROUP_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $GROUP_REGISTRY_USER --password-stdin
-  variables:
-    IMAGE_TAG: $CI_REGISTRY_IMAGE:almalinux$OS_VERSION-$CI_COMMIT_REF_SLUG
-  script:
-    - echo "Building $ITEM for $OS_VERSION"
-    - docker build -f docker/Dockerfile.almalinux --pull -t $IMAGE_TAG --build-arg OS_VERSION=$OS_VERSION .
-    - docker push $IMAGE_TAG
-  <<: *alma_build_matrix
 
 # Run shellcheck on all scripts
 shellcheck:
@@ -78,32 +50,22 @@ shellcheck:
     - shellcheck ./utils/epicsmng-completion.bash
     - shellcheck ./utils/completion_include.bash
 
-# TEst installation of the epicsmng modules
-install-configuration:
-  image: "$CI_REGISTRY_IMAGE:$OS-$CI_COMMIT_REF_SLUG"
-  stage: test
+# Create docker image corresponding to tag
+tag-version:
+  stage: release
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - echo "$GROUP_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $GROUP_REGISTRY_USER --password-stdin
+  variables:
+    CURR_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG-almalinux9
+    NEW_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   script:
-    - ./install.sh
-    - printf '%s' "$EPICSMNG_CONF" > epicsmng.conf
-    - epicsmng makemodules epicsmng.conf
-  <<: *docker_image_matrix
-
-# tag-version:
-#   stage: release
-#   image: docker:latest
-#   services:
-#     - docker:dind
-#   before_script:
-#     - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
-#   variables:
-#     CURR_TAG: $CI_REGISTRY_IMAGE/ioc-$ITEM:$OS-$CI_COMMIT_REF_SLUG
-#     NEW_TAG: $CI_REGISTRY_IMAGE/ioc-$ITEM:$CI_COMMIT_REF_SLUG
-#   script:
-#     - docker pull $CURR_TAG
-#     - docker tag $CURR_TAG $NEW_TAG
-#     - docker push $NEW_TAG
-#   needs:
-#     - build
-#   rules:
-#     - if: $CI_COMMIT_REF_NAME =~ /^v\d+.\d+.\d+$/
-#   <<: *release_matrix
+    - docker pull $CURR_TAG
+    - docker tag $CURR_TAG $NEW_TAG
+    - docker push $NEW_TAG
+  needs:
+    - build-alma
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^v\d+.\d+.\d+$|^v\d+.\d+$|^v\d+/
