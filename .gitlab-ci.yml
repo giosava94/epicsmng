@@ -65,7 +65,5 @@ tag-version:
     - docker pull $CURR_TAG
     - docker tag $CURR_TAG $NEW_TAG
     - docker push $NEW_TAG
-  needs:
-    - build-alma
   rules:
     - if: $CI_COMMIT_REF_NAME =~ /^v\d+.\d+.\d+$|^v\d+.\d+$|^v\d+/
