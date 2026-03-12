@@ -1,28 +1,8 @@
 pipeline {
     agent any
-    environment {
-        IMAGE = 'baltig.infn.it:4567/epicscs/epicsmng'
-    }
     stages {
         stage('Test epics-base versions') {
             matrix {
-                agent {
-                    kubernetes { 
-                        yaml """
-                        apiVersion: v1
-                        kind: Pod
-                        spec:
-                          imagePullSecrets:
-                            - name: baltig-reg-key
-                          containers:
-                            - name: builder
-                              image: ${IMAGE}:${BRANCH_NAME}-${OS}
-                              command:
-                                - cat
-                              tty: true
-                        """
-                    }
-                }
                 axes {
                     axis {
                         name 'OS'
@@ -36,9 +16,17 @@ pipeline {
                 stages {
                     stage('Test epics-base') {
                         steps {
-                            container('builder') {
-                                sh "printf '%s' 'base = ${BASE}' > epicsmng.conf"
-                                sh 'epicsmng makemodules -v epicsmng.conf'
+                            script {
+                                def pod = load "../pod.groovy"
+                                def tag = "${BRANCH_NAME}-${OS}"
+                                pod.epicsmngPod(tag) {
+                                    node(POD_LABEL) {
+                                        container('builder') {
+                                            sh "printf '%s' 'base = ${BASE}' > epicsmng.conf"
+                                            sh 'epicsmng makemodules -v epicsmng.conf'
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
