@@ -1,13 +1,102 @@
-image: koalaman/shellcheck-alpine:stable
-   
-shellcheck:
+stages:
+  - build
+  - test
+  - release
+
+.ubuntu_build_matrix: &ubuntu_build_matrix
+  parallel:
+    matrix:
+      - OS_VERSION: ["20.04", "22.04", "24.04"]
+
+.alma_build_matrix: &alma_build_matrix
+  parallel:
+    matrix:
+      - OS_VERSION: ["9", "10"]
+
+.docker_image_matrix: &docker_image_matrix
+  parallel:
+    matrix:
+      - OS:
+          [
+            "ubuntu20.04",
+            "ubuntu22.04",
+            "ubuntu24.04",
+            "almalinux9",
+            "almalinux10",
+          ]
+        EPICSMNG_CONF: ["base = R7.0.9"]
+
+# Compile and push Docker images for Ubuntu
+build-ubuntu:
+  image: docker:latest
+  stage: build
+  services:
+    - docker:dind
+  before_script:
+    - echo "$GROUP_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $GROUP_REGISTRY_USER --password-stdin
   variables:
-  #ignore warnings on unused variables and non costant source (imported files)
+    IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME-ubuntu$OS_VERSION
+  script:
+    - echo "Building $ITEM for $OS_VERSION"
+    - docker build -f docker/Dockerfile.ubuntu --pull -t $IMAGE_TAG --build-arg OS_VERSION=$OS_VERSION .
+    - docker push $IMAGE_TAG
+  <<: *ubuntu_build_matrix
+
+# Compile and push Docker images for AlmaLinux
+build-alma:
+  image: docker:latest
+  stage: build
+  services:
+    - docker:dind
+  before_script:
+    - echo "$GROUP_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $GROUP_REGISTRY_USER --password-stdin
+  variables:
+    IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME-almalinux$OS_VERSION
+  script:
+    - echo "Building $ITEM for $OS_VERSION"
+    - docker build -f docker/Dockerfile.almalinux --pull -t $IMAGE_TAG --build-arg OS_VERSION=$OS_VERSION .
+    - docker push $IMAGE_TAG
+  <<: *alma_build_matrix
+
+# Run shellcheck on all scripts
+shellcheck:
+  image: koalaman/shellcheck-alpine:stable
+  stage: test
+  variables:
+    # Ignore warnings on unused variables and non costant source (imported files)
     SHELLCHECK_OPTS: "-x -e SC2034,SC1090"
-  script: 
-  #run shellcheck on all scripts
+  script:
     - shellcheck ./epicsmng
     - shellcheck ./install.sh
     - shellcheck ./uninstall.sh
     - shellcheck ./utils/epicsmng-completion.bash
     - shellcheck ./utils/completion_include.bash
+
+# Test installation of the epicsmng modules
+install-configuration:
+  image: "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME-$OS"
+  stage: test
+  script:
+    - ./install.sh
+    - printf '%s' "$EPICSMNG_CONF" > epicsmng.conf
+    - epicsmng makemodules epicsmng.conf
+  <<: *docker_image_matrix
+
+# Create image tag for tagged version (vx.x.x). Use almalinux10 as base OS.
+tag-version:
+  stage: release
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+  variables:
+    OS: almalinux10
+    CURR_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME-$OS
+    NEW_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
+  script:
+    - docker pull $CURR_TAG
+    - docker tag $CURR_TAG $NEW_TAG
+    - docker push $NEW_TAG
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^v\d+.\d+.\d+$|^v\d+.\d+$|^v\d+/
