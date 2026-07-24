@@ -650,7 +650,7 @@ if [ "$command" == "version" ]; then
 fi
 
 # parse optional argument [-C <top>]
-while getopts ":C:j:vrt" o; do
+while getopts ":M:C:j:vrt" o; do
     case "${o}" in
         C)
             top="$(realpath "${OPTARG}")"  #save absolute path in top
