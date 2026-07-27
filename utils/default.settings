@@ -23,8 +23,8 @@
 base_url="https://github.com/epics-base/epics-base"
 base_requires=""
 base_optionals=""
-base_dbd="base.dbd"
-base_libs="\$(EPICS_BASE_IOC_LIBS)"
+base_dbd="base.dbd PVAServerRegister.dbd qsrv.dbd"
+base_libs="\$(EPICS_BASE_IOC_LIBS) \$(EPICS_BASE_PVA_CORE_LIBS) qsrv"
 base_recurse="true"
 
 asyn_url='https://github.com/epics-modules/asyn.git'
