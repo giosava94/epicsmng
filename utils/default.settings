@@ -141,3 +141,9 @@ visa_optionas+=
 visa_dbd+="VISAdrv.dbd"
 visa_libs+="VISAdrv"
 
+ipbus_url+="https://github.com/damib/ipbus_devsup.git"
+ipbus_requires+="base asyn"
+ipbus_optionas+=
+ipbus_dbd+="iocAsyn.dbd"
+ipbus_libs+="iocAsyn"
+
